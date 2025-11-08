@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const songController = require("../controllers/songController");
-const upload = require("../middleware/upload");
+const { upload,addWebPath} = require("../middleware/upload");
 const auth = require("../middleware/auth");
 const validateSong = require("../middleware/validateSong");
 
@@ -13,6 +13,7 @@ router.post(
     { name: "image", maxCount: 1 },
     { name: "audio", maxCount: 1 },
   ]),
+  addWebPath,
   validateSong,
   songController.createSong
 );
