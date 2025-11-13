@@ -55,7 +55,7 @@ exports.register = async (req, res) => {
     // Set httpOnly cookie
     setRefreshTokenCookie(res, refreshToken);
 
-    res.status(201).json({ accessToken, role: user.role });
+    res.status(201).json({ accessToken,user:{role: user.role , username:user.username,email:user.email}  });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -85,7 +85,7 @@ exports.login = async (req, res) => {
     // Set httpOnly cookie
     setRefreshTokenCookie(res, refreshToken);
 
-    res.json({ accessToken, role: user.role });
+    res.json({ accessToken,user:{role: user.role , username:user.username,email:user.email}  });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
