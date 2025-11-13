@@ -2,14 +2,16 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-const generateTokens = (userId) => {
-  const accessToken = jwt.sign({ userId }, process.env.JWT_SECRET, {
+const generateTokens = (userId, role) => {
+  const accessToken = jwt.sign({ userId, role }, process.env.JWT_SECRET, {
     expiresIn: "1h",
   });
 
-  const refreshToken = jwt.sign({ userId }, process.env.REFRESH_TOKEN_SECRET, {
-    expiresIn: "7d",
-  });
+  const refreshToken = jwt.sign(
+    { userId, role },
+    process.env.REFRESH_TOKEN_SECRET,
+    { expiresIn: "7d" }
+  );
 
   return { accessToken, refreshToken };
 };
@@ -18,8 +20,8 @@ const setRefreshTokenCookie = (res, refreshToken) => {
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "none",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
 
@@ -44,7 +46,7 @@ exports.register = async (req, res) => {
     });
 
     // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(user._id);
+    const { accessToken, refreshToken } = generateTokens(user._id, user.role);
 
     // Save refresh token
     user.refreshToken = refreshToken;
@@ -53,7 +55,7 @@ exports.register = async (req, res) => {
     // Set httpOnly cookie
     setRefreshTokenCookie(res, refreshToken);
 
-    res.status(201).json({ accessToken });
+    res.status(201).json({ accessToken, role: user.role });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -74,7 +76,7 @@ exports.login = async (req, res) => {
     }
 
     // Generate new tokens
-    const { accessToken, refreshToken } = generateTokens(user._id);
+    const { accessToken, refreshToken } = generateTokens(user._id, user.role);
 
     // Save new refresh token
     user.refreshToken = refreshToken;
@@ -83,7 +85,7 @@ exports.login = async (req, res) => {
     // Set httpOnly cookie
     setRefreshTokenCookie(res, refreshToken);
 
-    res.json({ accessToken });
+    res.json({ accessToken, role: user.role });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -111,7 +113,7 @@ exports.refreshToken = async (req, res) => {
     }
 
     // Generate new tokens
-    const tokens = generateTokens(user._id);
+    const tokens = generateTokens(user._id, user.role);
 
     // Update refresh token
     user.refreshToken = tokens.refreshToken;
@@ -120,7 +122,7 @@ exports.refreshToken = async (req, res) => {
     // Set new httpOnly cookie
     setRefreshTokenCookie(res, tokens.refreshToken);
 
-    res.json({ accessToken: tokens.accessToken });
+    res.json({ accessToken: tokens.accessToken, role: user.role });
   } catch (error) {
     res.status(403).json({ message: "Invalid refresh token" });
   }

@@ -3,6 +3,7 @@ const router = express.Router();
 const songController = require("../controllers/songController");
 const { upload,addWebPath} = require("../middleware/upload");
 const auth = require("../middleware/auth");
+const authorizeRole = require("../middleware/authorizeRole");
 const validateSong = require("../middleware/validateSong");
 
 router.get("/", songController.getAllSongs);
@@ -14,6 +15,7 @@ router.post(
     { name: "audio", maxCount: 1 },
   ]),
   addWebPath,
+  authorizeRole("admin"),
   validateSong,
   songController.createSong
 );
