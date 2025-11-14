@@ -21,6 +21,7 @@ const setRefreshTokenCookie = (res, refreshToken) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
+    path: "/",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
@@ -131,7 +132,14 @@ exports.refreshToken = async (req, res) => {
 exports.logout = async (req, res) => {
   try {
     // Clear refresh token in database
+    const userId = req.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
     const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
     user.refreshToken = null;
     await user.save();
 
@@ -140,6 +148,7 @@ exports.logout = async (req, res) => {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
+      path: "/",
     });
 
     res.json({ message: "Logged out successfully" });
