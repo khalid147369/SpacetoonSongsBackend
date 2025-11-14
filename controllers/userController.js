@@ -125,7 +125,7 @@ exports.refreshToken = async (req, res) => {
 
     res.json({ accessToken,user:{role: user.role , username:user.username,email:user.email}  });
   } catch (error) {
-    res.status(403).json({ message: "Invalid refresh token" });
+    res.status(403).json({ message: error.message });
   }
 };
 
