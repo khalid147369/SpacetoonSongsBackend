@@ -123,7 +123,7 @@ exports.refreshToken = async (req, res) => {
     // Set new httpOnly cookie
     setRefreshTokenCookie(res, tokens.refreshToken);
 
-    res.json({ accessToken,user:{role: user.role , username:user.username,email:user.email}  });
+    res.json({ accessToken: tokens.accessToken,user:{role: user.role , username:user.username,email:user.email}  });
   } catch (error) {
     res.status(403).json({ message: error.message });
   }
