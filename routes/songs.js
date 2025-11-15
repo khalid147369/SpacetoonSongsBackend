@@ -19,6 +19,7 @@ router.post(
   validateSong,
   songController.createSong
 );
-router.get("/:id", songController.getSongById);
+router.delete("/:id", auth, authorizeRole("admin"), songController.deleteSong);
+router.get("/", songController.getSongById);
 
 module.exports = router;
