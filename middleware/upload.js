@@ -1,32 +1,10 @@
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-const cloudinary = require("../config/cloudinary"); // <-- Asegúrate de crear este archivo
+const cloudinary = require("../config/cloudinary");
 
 // ------------------------------
-// 1. Configuración de Multer TEMPORAL
+// 1. Configuración de Multer en memoria
 // ------------------------------
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    if (file.fieldname === "image") {
-      cb(null, path.join(__dirname, "..", "uploads", "images"));
-    } else if (file.fieldname === "audio") {
-      cb(null, path.join(__dirname, "..", "uploads", "audio"));
-    }
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(
-      null,
-      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
-    );
-  },
-});
-
-// ------------------------------
-// 2. Filtrar archivos válidos
-// ------------------------------
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   if (file.fieldname === "image") {
@@ -38,10 +16,6 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// ------------------------------
-// 3. Multer configurado
-// ------------------------------
-
 const upload = multer({
   storage,
   fileFilter,
@@ -49,41 +23,45 @@ const upload = multer({
 });
 
 // ------------------------------
-// 4. Middleware para subir a Cloudinary
+// 2. Middleware para subir a Cloudinary desde memoria
 // ------------------------------
-
 const uploadToCloudinary = async (req, res, next) => {
   try {
-    // ------- Single upload -------
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: "auto",
-        folder: req.file.fieldname === "image" ? "images" : "audio",
-      });
-
-      // Borrar archivo local
-      fs.unlinkSync(req.file.path);
-
-      // URL final de Cloudinary
-      req.file.cloudinaryUrl = result.secure_url;
+      // Subida single
+      const result = await cloudinary.uploader.upload_stream(
+        { resource_type: "auto", folder: req.file.fieldname === "image" ? "images" : "audio" },
+        (error, result) => {
+          if (error) return next(error);
+          req.file.cloudinaryUrl = result.secure_url;
+          next();
+        }
+      ).end(req.file.buffer);
+      return; // Salimos del middleware porque next() se llama dentro del callback
     }
 
-    // ------- Multiple files upload -------
     if (req.files) {
+      // Subida multiple / fields
+      const promises = [];
+
       for (const key of Object.keys(req.files)) {
         for (const file of req.files[key]) {
-          const result = await cloudinary.uploader.upload(file.path, {
-            resource_type: "auto",
-            folder: file.fieldname === "image" ? "images" : "audio",
-          });
-
-          // Borrar archivo local
-          fs.unlinkSync(file.path);
-
-          // URL final
-          file.cloudinaryUrl = result.secure_url;
+          promises.push(
+            new Promise((resolve, reject) => {
+              cloudinary.uploader.upload_stream(
+                { resource_type: "auto", folder: file.fieldname === "image" ? "images" : "audio" },
+                (error, result) => {
+                  if (error) reject(error);
+                  file.cloudinaryUrl = result.secure_url;
+                  resolve();
+                }
+              ).end(file.buffer); 
+            })
+          );
         }
       }
+
+      await Promise.all(promises);
     }
 
     next();
