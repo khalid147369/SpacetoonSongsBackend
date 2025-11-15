@@ -13,8 +13,8 @@ exports.createSong = async (req, res) => {
   try {
     const song = new Song({
       title: req.body.title,
-      image: req.files["image"][0].webPath,
-      audio: req.files["audio"][0].webPath,
+      image: req.files["image"][0].cloudinaryUrl,
+      audio: req.files["audio"][0].cloudinaryUrl,
       
     });
 

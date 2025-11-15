@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const songController = require("../controllers/songController");
-const { upload,addWebPath} = require("../middleware/upload");
+const { uploadToCloudinary,upload} = require("../middleware/upload");
 const auth = require("../middleware/auth");
 const authorizeRole = require("../middleware/authorizeRole");
 const validateSong = require("../middleware/validateSong");
@@ -14,7 +14,7 @@ router.post(
     { name: "image", maxCount: 1 },
     { name: "audio", maxCount: 1 },
   ]),
-  addWebPath,
+  uploadToCloudinary,
   authorizeRole("admin"),
   validateSong,
   songController.createSong

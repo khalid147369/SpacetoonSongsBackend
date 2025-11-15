@@ -1,7 +1,12 @@
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
+const cloudinary = require("../config/cloudinary"); // <-- Asegúrate de crear este archivo
 
-// Configuración del almacenamiento
+// ------------------------------
+// 1. Configuración de Multer TEMPORAL
+// ------------------------------
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     if (file.fieldname === "image") {
@@ -19,7 +24,10 @@ const storage = multer.diskStorage({
   },
 });
 
-// Filtro de archivos
+// ------------------------------
+// 2. Filtrar archivos válidos
+// ------------------------------
+
 const fileFilter = (req, file, cb) => {
   if (file.fieldname === "image") {
     cb(null, file.mimetype.startsWith("image/"));
@@ -30,49 +38,59 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Configuración de multer
+// ------------------------------
+// 3. Multer configurado
+// ------------------------------
+
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
 });
 
-// Middleware para generar rutas relativas al servidor (web-friendly)
-const addWebPath = (req, res, next) => {
-  // Subida simple (single)
-  if (req.file) {
-    if (req.file.fieldname === "image") {
-      req.file.webPath = `/uploads/images/${req.file.filename}`;
-    } else if (req.file.fieldname === "audio") {
-      req.file.webPath = `/uploads/audio/${req.file.filename}`;
-    }
-  }
+// ------------------------------
+// 4. Middleware para subir a Cloudinary
+// ------------------------------
 
-  // Subida múltiple (array o fields)
-  if (req.files) {
-    if (Array.isArray(req.files)) {
-      req.files.forEach(file => {
-        if (file.fieldname === "image") {
-          file.webPath = `/uploads/images/${file.filename}`;
-        } else if (file.fieldname === "audio") {
-          file.webPath = `/uploads/audio/${file.filename}`;
+const uploadToCloudinary = async (req, res, next) => {
+  try {
+    // ------- Single upload -------
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        resource_type: "auto",
+        folder: req.file.fieldname === "image" ? "images" : "audio",
+      });
+
+      // Borrar archivo local
+      fs.unlinkSync(req.file.path);
+
+      // URL final de Cloudinary
+      req.file.cloudinaryUrl = result.secure_url;
+    }
+
+    // ------- Multiple files upload -------
+    if (req.files) {
+      for (const key of Object.keys(req.files)) {
+        for (const file of req.files[key]) {
+          const result = await cloudinary.uploader.upload(file.path, {
+            resource_type: "auto",
+            folder: file.fieldname === "image" ? "images" : "audio",
+          });
+
+          // Borrar archivo local
+          fs.unlinkSync(file.path);
+
+          // URL final
+          file.cloudinaryUrl = result.secure_url;
         }
-      });
-    } else {
-      // Si se usan campos con nombres diferentes (fields)
-      Object.keys(req.files).forEach(key => {
-        req.files[key].forEach(file => {
-          if (file.fieldname === "image") {
-            file.webPath = `/uploads/images/${file.filename}`;
-          } else if (file.fieldname === "audio") {
-            file.webPath = `/uploads/audio/${file.filename}`;
-          }
-        });
-      });
+      }
     }
-  }
 
-  next();
+    next();
+  } catch (error) {
+    console.error("Error Cloudinary:", error);
+    res.status(500).json({ error: "Error subiendo archivo a Cloudinary" });
+  }
 };
 
-module.exports = { upload, addWebPath };
+module.exports = { upload, uploadToCloudinary };
