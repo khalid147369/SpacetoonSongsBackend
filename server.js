@@ -30,9 +30,6 @@ app.use("/api/songs", songRoutes);
 const userRoutes = require("./routes/users");
 app.use("/api/users", userRoutes);
 
-// Serve static files
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
