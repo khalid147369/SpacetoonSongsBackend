@@ -30,6 +30,9 @@ app.use("/api/songs", songRoutes);
 const userRoutes = require("./routes/users");
 app.use("/api/users", userRoutes);
 
+const imageRoutes = require("./routes/image");
+app.use("/api/images", imageRoutes);
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

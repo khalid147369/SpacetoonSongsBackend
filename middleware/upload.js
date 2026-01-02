@@ -11,6 +11,7 @@ const fileFilter = (req, file, cb) => {
     cb(null, file.mimetype.startsWith("image/"));
   } else if (file.fieldname === "audio") {
     cb(null, file.mimetype.startsWith("audio/"));
+   
   } else {
     cb(new Error("Tipo de archivo no permitido"), false);
   }
